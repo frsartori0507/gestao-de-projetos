@@ -1,0 +1,157 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="py-3">
+    <h1 class="h3 fw-bold mb-4">Ajustes</h1>
+
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body p-4">
+            <!-- Perfil -->
+            <div class="d-flex align-items-center gap-3 mb-4 pb-4 border-bottom">
+                <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center"
+                    style="width: 64px; height: 64px; font-size: 24px; font-weight: bold;">
+                    {{ user.name[:2].upper() }}
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-0">{{ user.name }}</h5>
+                    <p class="text-muted small mb-0">{{ user.role }}</p>
+                </div>
+            </div>
+
+            <!-- Aparência -->
+            <h6 class="text-uppercase text-muted small fw-bold mb-3">Aparência</h6>
+            <div class="d-flex justify-content-between align-items-center mb-4 pb-4 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="material-symbols-outlined text-purple">dark_mode</span>
+                    <span>Modo Escuro</span>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="theme-toggle">
+                </div>
+            </div>
+
+            <!-- Segurança -->
+            <h6 class="text-uppercase text-muted small fw-bold mb-3">Segurança</h6>
+            <form action="{{ url_for('admin.settings') }}" method="POST">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <div class="form-floating mb-3">
+                    <input name="new_password" type="password" class="form-control" id="newPass"
+                        placeholder="Nova Senha" required>
+                    <label for="newPass">Nova Senha</label>
+                </div>
+                <div class="form-floating mb-3">
+                    <input name="confirm_password" type="password" class="form-control" id="confPass"
+                        placeholder="Confirmar" required>
+                    <label for="confPass">Confirmar Senha</label>
+                </div>
+                <button type="submit" class="btn btn-dark w-100 py-2">Atualizar Senha</button>
+            </form>
+
+            <!-- Configurações de Notificação (Telegram) - Apenas para Master -->
+            {% if session.get('role') == 'Master' %}
+            <h6 class="text-uppercase text-muted small fw-bold mb-3 mt-5">Notificações (Telegram)</h6>
+            <form action="{{ url_for('admin.settings') }}" method="POST">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <div class="form-floating mb-3">
+                    <input name="telegram_token" type="text" class="form-control" id="telToken" placeholder="Bot Token"
+                        value="{{ tel_token }}">
+                    <label for="telToken">Telegram Bot Token</label>
+                    <div class="form-text mt-1 px-1">Obtenha com o @BotFather</div>
+                </div>
+                <div class="form-floating mb-3">
+                    <input name="telegram_chat_id" type="text" class="form-control" id="telChat" placeholder="Chat ID"
+                        value="{{ tel_chat_id }}">
+                    <label for="telChat">Telegram Chat ID</label>
+                    <div class="form-text mt-1 px-1">Obtenha com o @userinfobot</div>
+                </div>
+                <button type="submit" class="btn btn-outline-dark w-100 py-2">Salvar Configurações de
+                    Notificação</button>
+            </form>
+            <div class="form-text mt-2 px-1">O backup automático é enviado semanalmente para o Telegram. Use os botões
+                acima para fazer um backup manual a qualquer momento.</div>
+
+            <!-- Backup do Banco de Dados - Apenas Master -->
+            <h6 class="text-uppercase text-muted small fw-bold mb-3 mt-5">
+                <span class="material-symbols-outlined align-middle" style="font-size: 18px;">backup</span>
+                Backup do Banco de Dados
+            </h6>
+
+            <div class="rounded-3 p-3 mb-3"
+                style="background: linear-gradient(135deg, rgba(var(--bs-primary-rgb, 13, 110, 253), 0.08), rgba(var(--bs-info-rgb, 13, 202, 240), 0.05)); border: 1px solid rgba(var(--bs-primary-rgb, 13, 110, 253), 0.15);">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="material-symbols-outlined text-primary" style="font-size: 20px;">info</span>
+                    <span class="small fw-semibold">Informações de Backup</span>
+                </div>
+                <div class="row g-2 small">
+                    <div class="col-sm-6">
+                        <div class="text-muted">Último backup local:</div>
+                        <div class="fw-semibold">{{ last_local_backup or 'Nenhum backup encontrado' }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted">Último backup Telegram:</div>
+                        <div class="fw-semibold">{{ last_cloud_backup or 'Nunca enviado' }}</div>
+                    </div>
+                    <div class="col-12 mt-1">
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ backup_count }} backup(s)
+                            armazenado(s)</span>
+                        <span class="badge bg-info bg-opacity-10 text-info ms-1">Automático: semanal</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <form action="{{ url_for('admin.backup_now') }}" method="POST" class="flex-fill">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="send_telegram" value="0">
+                    <button type="submit"
+                        class="btn btn-outline-dark w-100 py-2 d-flex align-items-center justify-content-center gap-2"
+                        id="btn-backup-local"
+                        onclick="this.disabled=true; this.innerHTML='<span class=\'spinner-border spinner-border-sm\'></span> Criando...'; this.closest('form').submit();">
+                        <span class="material-symbols-outlined" style="font-size: 20px;">save</span>
+                        Backup Local
+                    </button>
+                </form>
+                <form action="{{ url_for('admin.backup_now') }}" method="POST" class="flex-fill">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="send_telegram" value="1">
+                    <button type="submit"
+                        class="btn btn-dark w-100 py-2 d-flex align-items-center justify-content-center gap-2"
+                        id="btn-backup-telegram"
+                        onclick="this.disabled=true; this.innerHTML='<span class=\'spinner-border spinner-border-sm\'></span> Enviando...'; this.closest('form').submit();">
+                        <span class="material-symbols-outlined" style="font-size: 20px;">cloud_upload</span>
+                        Backup + Telegram
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="text-center text-muted small mt-4">STMI Gestão v2.0.0</div>
+</div>
+
+<script>
+    // Script simples para alternar tema
+    const themeToggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+
+    // Sincroniza o checkbox com o estado atual do tema (definido no layout.html)
+    if (html.getAttribute('data-bs-theme') === 'dark') {
+        themeToggle.checked = true;
+    }
+
+    themeToggle.addEventListener('change', function () {
+        if (this.checked) {
+            html.setAttribute('data-bs-theme', 'dark');
+            localStorage.theme = 'dark';
+            document.querySelector('.navbar')?.classList.remove('bg-white', 'navbar-light');
+            document.querySelector('.navbar')?.classList.add('bg-dark', 'navbar-dark');
+        } else {
+            html.setAttribute('data-bs-theme', 'light');
+            localStorage.theme = 'light';
+            document.querySelector('.navbar')?.classList.remove('bg-dark', 'navbar-dark');
+            document.querySelector('.navbar')?.classList.add('bg-white', 'navbar-light');
+        }
+    });
+</script>
+{% endblock %}

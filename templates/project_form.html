@@ -1,0 +1,710 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="py-4 animate-fade-in">
+    <!-- Header Premium -->
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div class="d-flex align-items-center gap-3">
+            <a href="{{ url_for('projects.project_list') }}"
+                class="btn btn-outline-secondary rounded-circle p-2 d-flex shadow-sm hover-scale border-0 bg-white">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </a>
+            <div>
+                <h1 class="h2 fw-bold mb-0 text-dark">{% if project %}Serviços / Execução{% else %}Lançar Novo Serviço{%
+                    endif %}</h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}"
+                                class="text-decoration-none text-muted small">Início</a></li>
+                        <li class="breadcrumb-item active small" aria-current="page">Execução</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+
+        {% if project %}
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ url_for('projects.project_cad', project_id=project.id) }}"
+                class="btn btn-outline-dark d-flex align-items-center gap-2 rounded-pill px-4 shadow-sm hover-lift transition">
+                <span class="material-symbols-outlined">edit_note</span>
+                <span class="fw-bold d-none d-md-inline">Dados do Projeto</span>
+            </a>
+            <a href="{{ url_for('projects.print_os', project_id=project.id) }}" target="_blank"
+                class="btn btn-outline-secondary d-flex align-items-center gap-2 rounded-pill px-4 shadow-sm hover-lift transition">
+                <span class="material-symbols-outlined" style="font-size: 20px;">print</span>
+                <span class="fw-bold d-none d-md-inline">Imprimir OS</span>
+            </a>
+            <div class="d-none d-md-block">
+                <div
+                    class="badge {% if project.status == 'Concluído' %}bg-success{% elif project.status == 'Finalizado' %}bg-info{% elif project.status == 'Urgente' %}bg-danger{% elif project.status == 'Em Andamento' %}bg-warning text-dark{% elif project.status == 'Em Desenvolvimento' %}bg-secondary{% else %}bg-primary{% endif %} px-3 py-2 rounded-pill shadow-sm">
+                    {{ project.status }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger d-flex align-items-center gap-2 border-0 shadow-sm mb-4 rounded-3">
+        <span class="material-symbols-outlined">error</span> {{ error }}
+    </div>
+    {% endif %}
+
+    <form
+        action="{{ url_for('projects.project_form', project_id=project.id) if project else url_for('projects.project_form') }}"
+        method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        <div class="row g-4">
+            <!-- Coluna da Esquerda: Identificação e Status -->
+            <div class="col-12 col-xl-4">
+                <div class="card border-0 shadow-sm mb-4 h-100">
+                    <div class="card-header bg-dark text-white p-4 border-0 rounded-top-4">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="material-symbols-outlined">info</span>
+                            <h5 class="fw-bold mb-0">Identificação Básica</h5>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <div class="form-floating mb-2">
+                                    <input name="project_id_manual"
+                                        value="{% if project %}{{ project.projectNumber }}{% else %}{{ suggested_number }}{% endif %}"
+                                        class="form-control border-0 bg-light fw-bold" id="pid" placeholder="Nº Projeto"
+                                        {{ 'readonly' if project and not can_edit }}>
+                                    <label for="pid">Nº Projeto</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating mb-2">
+                                    <select name="status" class="form-select border-0 bg-light fw-bold" id="stat"
+                                        {{ 'disabled' if (project and not can_edit) or (project and
+                                        project.status=='Finalizado' and session['role'] !='Master' ) }}>
+                                        <option value="Em Andamento" {% if project and project.status=='Em Andamento'
+                                            %}selected{% endif %}>Em Andamento</option>
+                                        <option value="Em Desenvolvimento" {% if project and
+                                            project.status=='Em Desenvolvimento' %}selected{% endif %}>Em
+                                            Desenvolvimento</option>
+                                        <option value="Concluído" {% if project and project.status=='Concluído'
+                                            %}selected{% endif %}>Concluído</option>
+                                        <option value="Finalizado" {% if project and project.status=='Finalizado'
+                                            %}selected{% endif %}>Finalizado</option>
+                                        <option value="Urgente" {% if project and project.status=='Urgente' %}selected{%
+                                            endif %}>Urgente</option>
+                                        <option value="Em Espera" {% if project and project.status=='Em Espera'
+                                            %}selected{% endif %}>Em Espera</option>
+                                    </select>
+                                    {% if project and project.status == 'Finalizado' and session['role'] != 'Master' %}
+                                    <input type="hidden" name="status" value="Finalizado">
+                                    {% endif %}
+                                    <label for="stat">Status</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-floating mb-2">
+                                    <input name="address" value="{{ project.address or '' }}"
+                                        class="form-control border-0 bg-light" id="addr" placeholder="Endereço" required
+                                        {{ 'readonly' if project and not can_edit }}>
+                                    <label for="addr">Endereço / Localização</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <input name="designer" value="{{ project.designer or session.get('user', '') }}"
+                                        class="form-control border-0 bg-light fw-medium" id="des" list="team-list"
+                                        placeholder="Responsável Técnico" {{ 'readonly' if project and not can_edit }}>
+                                    <label for="des">Responsável Técnico</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna da Direita: Detalhamento do Serviço -->
+            <div class="col-12 col-xl-8">
+                <!-- Abas de Navegação Estilizadas -->
+                <div class="card border-0 shadow-sm overflow-hidden">
+                    <div class="card-header bg-white p-0 border-0">
+                        <ul class="nav nav-pills nav-justified gap-1 p-2 bg-light rounded-top-4" id="serviceTabs"
+                            role="tablist">
+                            <li class="nav-item">
+                                <button
+                                    class="nav-link active rounded-3 py-3 d-flex align-items-center justify-content-center gap-2"
+                                    id="horiz-tab" data-bs-toggle="tab" data-bs-target="#tab-horizontal" type="button">
+                                    <span class="material-symbols-outlined">edit_road</span> Horizontal
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button
+                                    class="nav-link rounded-3 py-3 d-flex align-items-center justify-content-center gap-2"
+                                    id="vert-tab" data-bs-toggle="tab" data-bs-target="#tab-vertical" type="button">
+                                    <span class="material-symbols-outlined">vertical_align_center</span> Vertical
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button
+                                    class="nav-link rounded-3 py-3 d-flex align-items-center justify-content-center gap-2"
+                                    id="dev-tab" data-bs-toggle="tab" data-bs-target="#tab-devices" type="button">
+                                    <span class="material-symbols-outlined">construction</span> Dispositivos
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button
+                                    class="nav-link rounded-3 py-3 d-flex align-items-center justify-content-center gap-2"
+                                    id="sem-tab" data-bs-toggle="tab" data-bs-target="#tab-semaforico" type="button">
+                                    <span class="material-symbols-outlined">traffic</span> Semafórico
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button
+                                    class="nav-link rounded-3 py-3 d-flex align-items-center justify-content-center gap-2"
+                                    id="obs-tab" data-bs-toggle="tab" data-bs-target="#tab-obs" type="button">
+                                    <span class="material-symbols-outlined">history_edu</span> Obs
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button
+                                    class="nav-link rounded-3 py-3 d-flex align-items-center justify-content-center gap-2"
+                                    id="anexo-tab" data-bs-toggle="tab" data-bs-target="#tab-anexo" type="button">
+                                    <span class="material-symbols-outlined">photo_library</span> Anexos
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="card-body p-4 tab-content">
+                        <!-- Aba Horizontal -->
+                        <div class="tab-pane fade show active" id="tab-horizontal">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="fw-bold mb-0">Sinalização Horizontal</h5>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="has_horizontal" id="chk_h" {%
+                                        if not project or project.has_horizontal %}checked{% endif %}>
+                                    <label class="form-check-label small text-muted" for="chk_h">Ativo</label>
+                                </div>
+                            </div>
+
+                            <div id="h-warning"
+                                class="alert alert-warning py-2 px-3 mb-3 small d-none d-flex align-items-center gap-2 border-0 shadow-sm">
+                                <span class="material-symbols-outlined fs-5">lock</span>
+                                <div><b>Sinalização Finalizada:</b> O progresso e responsável não serão alterados. Para
+                                    editar, remova a Data de Conclusão abaixo. e salve para nova atualizações </div>
+                            </div>
+
+                            <div class="progress-container mb-4 p-4 bg-light rounded-4">
+                                <label class="form-label d-flex justify-content-between fw-bold mb-3">
+                                    <span>Progresso da Pintura</span>
+                                    <span id="h-label" class="text-primary">{{ project.h_progress if project else 0
+                                        }}%</span>
+                                </label>
+                                <input type="range" class="form-range" id="h-range" name="h_progress" min="0" max="100"
+                                    value="{{ project.h_progress if project else 0 }}"
+                                    oninput="document.getElementById('h-label').innerText = this.value + '%'"
+                                    {{ 'disabled' if project and not can_edit }}>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <div class="form-floating">
+                                        <input type="date" name="h_start_date"
+                                            value="{{ project.h_start_date if project else '' }}"
+                                            class="form-control border-0 bg-light" {{ 'readonly' if project and not
+                                            can_edit }}>
+                                        <label>Data de Início</label>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <div class="form-floating">
+                                        <input type="date" name="h_end_date"
+                                            value="{{ project.h_end_date if project else '' }}"
+                                            class="form-control border-0 bg-light" {{ 'readonly' if project and not
+                                            can_edit }}>
+                                        <label>Data de Conclusão</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-floating">
+                                        <input type="text" name="h_responsible"
+                                            value="{{ project.h_responsible if project else '' }}"
+                                            class="form-control border-0 bg-light" list="team-list" placeholder="Resp"
+                                            {{ 'readonly' if project and not can_edit }}>
+                                        <label>Equipe / Responsável</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aba Vertical -->
+                        <div class="tab-pane fade" id="tab-vertical">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="fw-bold mb-0">Sinalização Vertical</h5>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="has_vertical" id="chk_v" {% if
+                                        not project or project.has_vertical %}checked{% endif %} {{ 'disabled' if
+                                        project and not can_edit }}>
+                                    <label class="form-check-label small text-muted" for="chk_v">Ativo</label>
+                                </div>
+                            </div>
+
+                            <div id="v-warning"
+                                class="alert alert-warning py-2 px-3 mb-3 small d-none d-flex align-items-center gap-2 border-0 shadow-sm">
+                                <span class="material-symbols-outlined fs-5">lock</span>
+                                <div><b>Sinalização Finalizada:</b> O progresso e responsável não serão alterados. Para
+                                    editar, remova a Data de Conclusão abaixo.</div>
+                            </div>
+
+                            <div class="progress-container mb-4 p-4 bg-light rounded-4">
+                                <label class="form-label d-flex justify-content-between fw-bold mb-3">
+                                    <span>Progresso de Instalação</span>
+                                    <span id="v-label" class="text-primary">{{ project.v_progress if project else 0
+                                        }}%</span>
+                                </label>
+                                <input type="range" class="form-range" id="v-range" name="v_progress" min="0" max="100"
+                                    value="{{ project.v_progress if project else 0 }}"
+                                    oninput="document.getElementById('v-label').innerText = this.value + '%'"
+                                    {{ 'disabled' if project and not can_edit }}>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <div class="form-floating">
+                                        <input type="date" name="v_start_date"
+                                            value="{{ project.v_start_date if project else '' }}"
+                                            class="form-control border-0 bg-light" {{ 'readonly' if project and not
+                                            can_edit }}>
+                                        <label>Data de Início</label>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <div class="form-floating">
+                                        <input type="date" name="v_end_date"
+                                            value="{{ project.v_end_date if project else '' }}"
+                                            class="form-control border-0 bg-light" {{ 'readonly' if project and not
+                                            can_edit }}>
+                                        <label>Data de Conclusão</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-floating">
+                                        <input type="text" name="v_responsible"
+                                            value="{{ project.v_responsible if project else '' }}"
+                                            class="form-control border-0 bg-light" list="team-list" placeholder="Resp"
+                                            {{ 'readonly' if project and not can_edit }}>
+                                        <label>Equipe / Responsável</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aba Dispositivos -->
+                        <div class="tab-pane fade" id="tab-devices">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="fw-bold mb-0">Dispositivos Auxiliares</h5>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="has_devices" id="chk_d" {% if
+                                        project and project.has_devices %}checked{% endif %} {{ 'disabled' if project
+                                        and not can_edit }}>
+                                    <label class="form-check-label small text-muted" for="chk_d">Ativo</label>
+                                </div>
+                            </div>
+
+                            <div id="d-warning"
+                                class="alert alert-warning py-2 px-3 mb-3 small d-none d-flex align-items-center gap-2 border-0 shadow-sm">
+                                <span class="material-symbols-outlined fs-5">lock</span>
+                                <div><b>Dispositivo Finalizado:</b> O progresso e responsável não serão alterados. Para
+                                    editar, remova a Data de Conclusão abaixo.</div>
+                            </div>
+
+                            <div class="progress-container mb-4 p-4 bg-light rounded-4">
+                                <label class="form-label d-flex justify-content-between fw-bold mb-3">
+                                    <span>Progresso da Implantação</span>
+                                    <span id="d-label" class="text-primary">{{ project.d_progress if project else 0
+                                        }}%</span>
+                                </label>
+                                <input type="range" class="form-range" id="d-range" name="d_progress" min="0" max="100"
+                                    value="{{ project.d_progress if project else 0 }}"
+                                    oninput="document.getElementById('d-label').innerText = this.value + '%'"
+                                    {{ 'disabled' if project and not can_edit }}>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <div class="form-floating">
+                                        <input type="date" name="d_start_date"
+                                            value="{{ project.d_start_date if project else '' }}"
+                                            class="form-control border-0 bg-light" {{ 'readonly' if project and not
+                                            can_edit }}>
+                                        <label>Data de Início</label>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <div class="form-floating">
+                                        <input type="date" name="d_end_date"
+                                            value="{{ project.d_end_date if project else '' }}"
+                                            class="form-control border-0 bg-light" {{ 'readonly' if project and not
+                                            can_edit }}>
+                                        <label>Data de Conclusão</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-floating">
+                                        <input type="text" name="d_responsible"
+                                            value="{{ project.d_responsible if project else '' }}"
+                                            class="form-control border-0 bg-light" list="team-list" placeholder="Resp"
+                                            {{ 'readonly' if project and not can_edit }}>
+                                        <label>Equipe / Responsável</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aba Semafórico -->
+                        <div class="tab-pane fade" id="tab-semaforico">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="fw-bold mb-0">Sinalização Semafórica</h5>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="has_semaforico" id="chk_s" {%
+                                        if project and project.has_semaforico %}checked{% endif %} {{ 'disabled' if
+                                        project and not can_edit }}>
+                                    <label class="form-check-label small text-muted" for="chk_s">Ativo</label>
+                                </div>
+                            </div>
+
+                            <div id="s-warning"
+                                class="alert alert-warning py-2 px-3 mb-3 small d-none d-flex align-items-center gap-2 border-0 shadow-sm">
+                                <span class="material-symbols-outlined fs-5">lock</span>
+                                <div><b>Semafórico Finalizado:</b> O progresso e responsável não serão alterados. Para
+                                    editar, remova a Data de Conclusão abaixo.</div>
+                            </div>
+
+                            <div class="progress-container mb-4 p-4 bg-light rounded-4">
+                                <label class="form-label d-flex justify-content-between fw-bold mb-3">
+                                    <span>Progresso da Implantação</span>
+                                    <span id="s-label" class="text-primary">{{ project.s_progress if project else 0
+                                        }}%</span>
+                                </label>
+                                <input type="range" class="form-range" id="s-range" name="s_progress" min="0" max="100"
+                                    value="{{ project.s_progress if project else 0 }}"
+                                    oninput="document.getElementById('s-label').innerText = this.value + '%'"
+                                    {{ 'disabled' if project and not can_edit }}>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <div class="form-floating">
+                                        <input type="date" name="s_start_date"
+                                            value="{{ project.s_start_date if project else '' }}"
+                                            class="form-control border-0 bg-light" {{ 'readonly' if project and not
+                                            can_edit }}>
+                                        <label>Data de Início</label>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <div class="form-floating">
+                                        <input type="date" name="s_end_date"
+                                            value="{{ project.s_end_date if project else '' }}"
+                                            class="form-control border-0 bg-light" {{ 'readonly' if project and not
+                                            can_edit }}>
+                                        <label>Data de Conclusão</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-floating">
+                                        <input type="text" name="s_responsible"
+                                            value="{{ project.s_responsible if project else '' }}"
+                                            class="form-control border-0 bg-light" list="team-list" placeholder="Resp"
+                                            {{ 'readonly' if project and not can_edit }}>
+                                        <label>Equipe / Responsável</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aba Obs -->
+                        <div class="tab-pane fade" id="tab-obs">
+                            <h5 class="fw-bold mb-3">Relato de Execução</h5>
+                            <textarea name="observations" class="form-control border-0 bg-light p-3" rows="10"
+                                placeholder="Descreva aqui o andamento da obra, dificuldades ou observações técnicas..."
+                                {{ 'readonly' if project and not can_edit
+                                }}>{{ project.observations if project and project.observations else '' }}</textarea>
+                        </div>
+
+                        <!-- Aba Anexo -->
+                        <div class="tab-pane fade" id="tab-anexo">
+                            <h5 class="fw-bold mb-3">Anexos Fotográficos</h5>
+                            <p class="text-muted small mb-4">Selecione até 3 fotos da obra (Upload ou Câmera). As
+                                imagens são <b>otimizadas automaticamente para menos de 100 KB</b> para garantir rapidez
+                                e visibilidade.</p>
+
+                            <div class="row g-4">
+                                {% for i in range(1, 4) %}
+                                <div class="col-12 col-md-4">
+                                    <div class="card border border-dashed h-100 text-center p-3 bg-light rounded-4 position-relative d-flex flex-column justify-content-center align-items-center"
+                                        style="min-height: 250px;">
+                                        <!-- Campo oculto para sinalizar exclusão -->
+                                        <input type="hidden" name="photo{{ i }}_delete" id="photo{{ i }}_delete"
+                                            value="false">
+
+                                        <!-- Input de arquivo -->
+                                        <input type="file" name="photo{{ i }}_upload" id="photo{{ i }}_upload"
+                                            class="d-none" accept="image/*" onchange="previewImage(this, {{ i }})">
+
+                                        <div id="content-container-{{ i }}"
+                                            class="w-100 h-100 d-flex flex-column justify-content-center align-items-center">
+                                            {% set photo_attr = 'photo' ~ i %}
+                                            {% set photo_val = project[photo_attr] if project else None %}
+
+                                            {% if photo_val %}
+                                            <!-- Caso tenha foto -->
+                                            <div class="mb-3 w-100">
+                                                <img src="{{ url_for('static', filename='uploads/projects/' ~ photo_val) }}"
+                                                    class="img-fluid rounded-3 shadow-sm border"
+                                                    style="max-height: 150px; width: 100%; object-fit: cover;">
+                                            </div>
+                                            <div class="d-flex flex-wrap justify-content-center gap-2">
+                                                <a href="{{ url_for('static', filename='uploads/projects/' ~ photo_val) }}"
+                                                    target="_blank"
+                                                    class="btn btn-outline-info btn-sm rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm">
+                                                    <span class="material-symbols-outlined"
+                                                        style="font-size: 18px;">visibility</span> Abrir
+                                                </a>
+                                                {% if can_edit %}
+                                                <button type="button" onclick="removeImage({{ i }})"
+                                                    class="btn btn-outline-danger btn-sm rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm">
+                                                    <span class="material-symbols-outlined"
+                                                        style="font-size: 18px;">delete</span> Deletar
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                            {% else %}
+                                            <!-- Caso NÃO tenha foto -->
+                                            <div class="py-4 text-muted w-100">
+                                                <span class="material-symbols-outlined d-block mb-2"
+                                                    style="font-size: 40px;">add_a_photo</span>
+                                                <span class="small fw-bold">Foto {{ i }}</span>
+                                            </div>
+                                            {% if can_edit %}
+                                            <label for="photo{{ i }}_upload"
+                                                class="btn btn-primary btn-sm rounded-pill px-4 align-self-center cursor-pointer shadow-sm">
+                                                Incluir
+                                            </label>
+                                            {% else %}
+                                            <div class="text-muted small">Sem foto</div>
+                                            {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer bg-white border-0 p-4 pt-0 text-end">
+                        {% if can_edit %}
+                        <div id="global-lock-notice"
+                            class="d-none alert alert-light border-0 small text-muted d-inline-flex align-items-center gap-2 mb-0 me-3">
+                            <span class="material-symbols-outlined text-warning" style="font-size: 18px;">warning</span>
+                            Existem serviços finalizados que não serão alterados.
+                        </div>
+                        <button type="submit"
+                            class="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-bold shadow-lg hover-lift transition d-inline-flex align-items-center gap-2">
+                            <span class="material-symbols-outlined">check_circle</span>ATUALIZAR
+                        </button>
+                        {% else %}
+                        <div
+                            class="alert alert-light border-0 small text-muted d-inline-flex align-items-center gap-2 mb-0">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">lock</span>
+                            Este projeto está finalizado e bloqueado para edições.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Datalist para autocomplete -->
+<datalist id="team-list">
+    {% for member in team_members %}
+    <option value="{{ member.name }}">{{ member.role }}</option>
+    {% endfor %}
+</datalist>
+
+<style>
+    .animate-fade-in {
+        animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(15px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .transition {
+        transition: all 0.2s ease;
+    }
+
+    .hover-lift:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 15px rgba(19, 127, 236, 0.3) !important;
+    }
+
+    .hover-scale:hover {
+        transform: scale(1.1);
+    }
+
+    .nav-pills .nav-link {
+        color: #6c757d;
+        font-weight: 600;
+        border: 1px solid transparent;
+        transition: all 0.2s;
+        background-color: transparent;
+    }
+
+    .nav-pills .nav-link.active {
+        background-color: #fff !important;
+        color: var(--bs-primary) !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border-color: #eee;
+    }
+
+    .form-control:focus {
+        box-shadow: none;
+        background-color: #fff !important;
+        border-bottom: 2px solid var(--bs-primary) !important;
+    }
+
+    .form-range::-webkit-slider-thumb {
+        background: var(--bs-primary);
+    }
+
+    .card {
+        border-radius: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function previewImage(input, index) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                const container = document.getElementById('content-container-' + index);
+                const imageUrl = e.target.result;
+
+                let html = `
+                    <div class="mb-3 w-100">
+                        <img src="${imageUrl}" class="img-fluid rounded-3 shadow-sm border" style="max-height: 150px; width: 100%; object-fit: cover;">
+                    </div>
+                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                        <a href="${imageUrl}" target="_blank" class="btn btn-outline-info btn-sm rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">visibility</span> Abrir
+                        </a>
+                        <button type="button" onclick="removeImage(${index})" class="btn btn-outline-danger btn-sm rounded-pill px-3 d-flex align-items-center gap-1 shadow-sm">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">delete</span> Deletar
+                        </button>
+                    </div>
+                `;
+                container.innerHTML = html;
+
+                // Resetar flag de delete
+                document.getElementById('photo' + index + '_delete').value = 'false';
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function removeImage(index) {
+        const container = document.getElementById('content-container-' + index);
+        container.innerHTML = `
+            <div class="py-4 text-muted w-100">
+                <span class="material-symbols-outlined d-block mb-2" style="font-size: 40px;">add_a_photo</span>
+                <span class="small fw-bold">Foto ${index}</span>
+            </div>
+            <label for="photo${index}_upload" class="btn btn-primary btn-sm rounded-pill px-4 align-self-center cursor-pointer shadow-sm">
+                Incluir
+            </label>
+        `;
+
+        // Marcar para deletar no servidor
+        document.getElementById('photo' + index + '_delete').value = 'true';
+        // Limpar o input file
+        document.getElementById('photo' + index + '_upload').value = '';
+    }
+
+    // Controle de Regras de Negócio (Datas e Bloqueios)
+    document.addEventListener('DOMContentLoaded', function () {
+        const prefixes = ['h', 'v', 'd', 's'];
+        const isMaster = "{{ session.get('role') == 'Master' }}" === "True";
+        const globalNotice = document.getElementById('global-lock-notice');
+
+        function checkGlobalLock() {
+            if (!globalNotice) return;
+            let hasAnyLocked = false;
+            prefixes.forEach(p => {
+                const endDate = document.getElementsByName(p + '_end_date')[0];
+                if (endDate && endDate.value) hasAnyLocked = true;
+            });
+
+            if (hasAnyLocked && !isMaster) {
+                globalNotice.classList.remove('d-none');
+            } else {
+                globalNotice.classList.add('d-none');
+            }
+        }
+
+        prefixes.forEach(p => {
+            const startDateInput = document.getElementsByName(p + '_start_date')[0];
+            const endDateInput = document.getElementsByName(p + '_end_date')[0];
+            const responsibleInput = document.getElementsByName(p + '_responsible')[0];
+            const progressRange = document.getElementById(p + '-range');
+            const warningDiv = document.getElementById(p + '-warning');
+
+            function updateRules() {
+                // 1. Responsável obrigatório se tiver data inicial
+                if (startDateInput.value) {
+                    responsibleInput.setAttribute('required', 'required');
+                    responsibleInput.parentElement.classList.add('border', 'border-primary');
+                } else {
+                    responsibleInput.removeAttribute('required');
+                    responsibleInput.parentElement.classList.remove('border', 'border-primary');
+                }
+
+                // 2. Notificação de Serviço Finalizado (Sem bloqueio físico de campos)
+                if (endDateInput.value && !isMaster) {
+                    progressRange.style.filter = 'grayscale(0.5) opacity(0.8)';
+                    if (warningDiv) warningDiv.classList.remove('d-none');
+
+                    if (!progressRange.parentElement.querySelector('.badge-travado')) {
+                        progressRange.parentElement.querySelector('label').innerHTML += ' <span class="badge bg-success ms-1 badge-travado" style="font-size: 10px;">Finalizado</span>';
+                    }
+                } else {
+                    progressRange.style.filter = 'none';
+                    if (warningDiv) warningDiv.classList.add('d-none');
+                    const badge = progressRange.parentElement.querySelector('.badge-travado');
+                    if (badge) badge.remove();
+                }
+                checkGlobalLock();
+            }
+
+            if (startDateInput && endDateInput && responsibleInput && progressRange) {
+                startDateInput.addEventListener('change', updateRules);
+                endDateInput.addEventListener('change', updateRules);
+                updateRules(); // Rodar no load
+            }
+        });
+    });
+</script>
+{% endblock %}

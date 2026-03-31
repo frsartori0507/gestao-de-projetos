@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="d-flex flex-col align-items-center justify-content-center vh-100">
+  <div class="card shadow-lg p-4 border-0" style="max-width: 400px; width: 100%;">
+    <div class="text-center mb-4">
+      <div
+        class="bg-primary text-white rounded-3 d-inline-flex align-items-center justify-content-center p-3 mb-3 shadow">
+        <span class="h4 mb-0 fw-bold">STMI</span>
+      </div>
+      <h1 class="h4 fw-bold">Bem-vindo de volta</h1>
+      <p class="text-muted small">Gerencie seus projetos com eficiência</p>
+    </div>
+
+    <form action="{{ url_for('auth.do_login') }}" method="POST">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <label class="form-label fw-bold small">Primeiro Nome</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light border-end-0"><span
+              class="material-symbols-outlined">person</span></span>
+          <input name="username" class="form-control border-start-0 bg-light" placeholder="Seu primeiro nome"
+            type="text" required />
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-bold small">Senha</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light border-end-0"><span
+              class="material-symbols-outlined">lock</span></span>
+          <input name="password" class="form-control border-start-0 bg-light" placeholder="Digite sua senha (se houver)"
+            type="password" />
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow-sm">
+        Entrar <span class="material-symbols-outlined ms-1" style="font-size: 18px;">arrow_forward</span>
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

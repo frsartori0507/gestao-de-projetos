@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="py-3">
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a href="{{ url_for('admin.user_management') }}" class="btn btn-light rounded-circle p-2 d-flex"><span
+                class="material-symbols-outlined">arrow_back</span></a>
+        <h1 class="h3 fw-bold mb-0">Editar Usuário</h1>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form action="{{ url_for('admin.edit_user', user_id=user.id) }}" method="POST">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3">
+                    <label class="form-label">Nome</label>
+                    <input name="name" value="{{ user.name }}" class="form-control" type="text" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Cargo / Função</label>
+                    <select name="role" class="form-select">
+                        <option value="Técnico de Campo" {% if user.role=='Técnico de Campo' %}selected{% endif %}>
+                            Técnico de Campo
+                        </option>
+                        <option value="Responsável Técnico" {% if user.role=='Responsável Técnico' %}selected{% endif
+                            %}>Responsável Técnico</option>
+                        <option value="Técnico de Projetos" {% if user.role=='Técnico de Projetos' %}selected{% endif
+                            %}>Técnico de Projetos
+                        </option>
+                        <option value="Administrador" {% if user.role=='Administrador' %}selected{% endif %}>
+                            Administrador</option>
+                        {% if session['role'] == 'Master' or user.role == 'Master' %}
+                        <option value="Master" {% if user.role=='Master' %}selected{% endif %}>
+                            Master</option>
+                        {% endif %}
+                        <option value="Visualizador" {% if user.role=='Visualizador' %}selected{% endif %}>Visualizador
+                        </option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Nova Senha (Opcional)</label>
+                    <input name="password" class="form-control" type="password"
+                        placeholder="Deixe em branco para manter a atual">
+                </div>
+                <div class="form-check form-switch mb-4">
+                    <input class="form-check-input" type="checkbox" name="active" {% if user.active %}checked{% endif
+                        %}>
+                    <label class="form-check-label">Usuário Ativo</label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

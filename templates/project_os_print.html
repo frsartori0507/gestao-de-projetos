@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OS {{ project.osNumber }} - STMI</title>
+    <!-- Bootstrap 5 para estrutura básica -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --stmi-blue: #137fec;
+            --text-main: #1a1a1a;
+            --text-muted: #666;
+            --border-color: #333;
+            --light-bg: #fdfdfd;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #eee;
+            color: var(--text-main);
+            font-size: 11pt;
+            line-height: 1.4;
+        }
+
+        .no-print {
+            padding: 15px;
+            background: white;
+            border-bottom: 1px solid #ddd;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .a4-container {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 15mm 20mm;
+            margin: 20px auto;
+            background: white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media print {
+            body {
+                background: none;
+                margin: 0;
+                padding: 0;
+            }
+
+            .a4-container {
+                box-shadow: none;
+                margin: 0;
+                padding: 10mm 15mm;
+                width: 210mm;
+                min-height: 297mm;
+            }
+
+            .no-print {
+                display: none;
+            }
+
+            @page {
+                size: A4;
+                margin: 0;
+            }
+        }
+
+        /* Watermark */
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 100pt;
+            font-family: 'Outfit', sans-serif;
+            color: rgba(0, 0, 0, 0.02);
+            white-space: nowrap;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Typography */
+        h1,
+        h2,
+        h3,
+        .header-logo {
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -0.5px;
+        }
+
+        .header-logo {
+            font-size: 32pt;
+            font-weight: 800;
+            color: var(--stmi-blue);
+            line-height: 1;
+        }
+
+        .doc-title {
+            font-size: 18pt;
+            font-weight: 700;
+            text-align: right;
+            text-transform: uppercase;
+        }
+
+        .section-title {
+            border-bottom: 1.5px solid var(--border-color);
+            margin: 35px 0 15px 0;
+            padding-bottom: 5px;
+            font-size: 10pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-main);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Data Fields */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 15px;
+        }
+
+        .field {
+            margin-bottom: 5px;
+        }
+
+        .field-label {
+            font-size: 8pt;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            display: block;
+        }
+
+        .field-value {
+            font-size: 11pt;
+            font-weight: 500;
+            padding: 3px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* Checkboxes & Items */
+        .scope-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .scope-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #f0f0f0;
+            background: #fafafa;
+        }
+
+        .scope-row.active {
+            border-color: #ddd;
+            background: white;
+        }
+
+        .check-indicator {
+            width: 18px;
+            height: 18px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .check-indicator.checked::after {
+            content: '';
+            width: 10px;
+            height: 10px;
+            background: var(--stmi-blue);
+            border-radius: 2px;
+        }
+
+        .scope-text {
+            font-weight: 600;
+            font-size: 10.5pt;
+        }
+
+        .responsible-tag {
+            font-size: 9pt;
+            font-weight: 600;
+            color: #444;
+            padding: 2px 8px;
+            background: #eee;
+            border-radius: 4px;
+        }
+
+        /* Signature */
+        .signature-section {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-top: 60px;
+        }
+
+        .sig-box {
+            text-align: center;
+        }
+
+        .sig-line {
+            border-top: 1px solid var(--border-color);
+            margin-bottom: 8px;
+            padding-top: 5px;
+        }
+
+        .sig-label {
+            font-size: 8pt;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .sig-date {
+            font-size: 8pt;
+            color: var(--text-muted);
+        }
+
+        .footer-note {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 8pt;
+            color: var(--text-muted);
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+
+        .obs-box {
+            background: #f9f9f9;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 10pt;
+            color: #333;
+            min-height: 80px;
+            border-left: 4px solid var(--stmi-blue);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="no-print">
+        <button onclick="window.print()" class="btn btn-primary px-5 py-2 rounded-pill fw-bold">
+            IMPRIMIR DOCUMENTO
+        </button>
+        <button onclick="window.close();" class="btn btn-outline-dark px-4 py-2 rounded-pill ms-2">FECHAR</button>
+    </div>
+
+    <div class="a4-container">
+        <div class="watermark">STMI</div>
+
+        <!-- Cabeçalho -->
+        <header class="d-flex justify-content-between align-items-start mb-5">
+            <div>
+                <div class="header-logo">STMI</div>
+                <div class="small fw-bold text-muted" style="letter-spacing: 1px;">Secretaria de Transporte, Mobilidade
+                    e Infraestrutura</div>
+            </div>
+            <div class="text-end">
+                <div class="doc-title">Ordem de Serviço</div>
+                <div class="fw-bold" style="font-size: 12pt;">OS Nº {{ project.osNumber }}</div>
+            </div>
+        </header>
+
+        <!-- Identificação -->
+        <div class="section-title">
+            <span>Dados da Solicitação</span>
+            <span>DATA: {{ today }}</span>
+        </div>
+
+        <div class="info-grid mb-4">
+            <div class="col-span-12" style="grid-column: span 3;">
+                <label class="field-label">Projeto Nº</label>
+                <div class="field-value fw-bold text-primary">{{ project.projectNumber }}</div>
+                {% if project.designer %}
+                <div class="mt-1 text-muted" style="font-size: 8pt; font-weight: 500;">{{ project.designer }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-span-12" style="grid-column: span 6;">
+                <label class="field-label">Documento</label>
+                <div class="field-value">
+                    {{ project.doc_type or '-' }} {{ project.doc_number or '' }}
+                    {% if project.doc_year %}/ {{ project.doc_year }}{% endif %}
+                </div>
+            </div>
+            <div class="col-span-12" style="grid-column: span 3;">
+                <label class="field-label">Data de Registro</label>
+                <div class="field-value">{{ project.date | format_date if project.date else today }}</div>
+            </div>
+        </div>
+
+        <div class="info-grid">
+            <div class="col-span-12" style="grid-column: span 12;">
+                <label class="field-label">Localização da Intervenção</label>
+                <div class="field-value" style="font-size: 10.5pt; font-weight: 500;">
+                    {{ project.address }}
+                    {% if project.address_number %}, {{ project.address_number }}{% endif %}
+                    {% if project.neighborhood %} - {{ project.neighborhood | upper }}{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Escopo -->
+        <div class="section-title mt-5">
+            <span>Escopo do Serviço</span>
+        </div>
+
+        <div class="scope-list">
+            <!-- Sinalização Horizontal -->
+            <div class="scope-row {% if project.has_horizontal %}active{% endif %}">
+                <div class="d-flex align-items-center">
+                    <div class="check-indicator {% if project.has_horizontal %}checked{% endif %}"></div>
+                    <span class="scope-text">Sinalização Horizontal</span>
+                </div>
+                {% if project.h_responsible %}
+                <span class="responsible-tag">{{ project.h_responsible }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Sinalização Vertical -->
+            <div class="scope-row {% if project.has_vertical %}active{% endif %}">
+                <div class="d-flex align-items-center">
+                    <div class="check-indicator {% if project.has_vertical %}checked{% endif %}"></div>
+                    <span class="scope-text">Sinalização Vertical</span>
+                </div>
+                {% if project.v_responsible %}
+                <span class="responsible-tag">{{ project.v_responsible }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Dispositivos Auxiliares -->
+            <div class="scope-row {% if project.has_devices %}active{% endif %}">
+                <div class="d-flex align-items-center">
+                    <div class="check-indicator {% if project.has_devices %}checked{% endif %}"></div>
+                    <span class="scope-text">Dispositivos Auxiliares</span>
+                </div>
+                {% if project.d_responsible %}
+                <span class="responsible-tag">{{ project.d_responsible }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Sinalização Semafórica -->
+            <div class="scope-row {% if project.has_semaforico %}active{% endif %}">
+                <div class="d-flex align-items-center">
+                    <div class="check-indicator {% if project.has_semaforico %}checked{% endif %}"></div>
+                    <span class="scope-text">Sinalização Semafórica</span>
+                </div>
+                {% if project.s_responsible %}
+                <span class="responsible-tag">{{ project.s_responsible }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Observações -->
+        {% if project.observations %}
+        <div class="section-title">
+            <span>Observações e Instruções Técnicas</span>
+        </div>
+        <div class="obs-box">
+            {{ project.observations }}
+        </div>
+        {% endif %}
+
+        <!-- Assinaturas -->
+        <footer class="signature-section">
+            <div class="sig-box">
+                <div class="sig-line"></div>
+                <div class="sig-label">Encarregado (Emissão)</div>
+                <div class="sig-date">DATA: {{ today }}</div>
+            </div>
+            <div class="sig-box">
+                <div class="sig-line"></div>
+                <div class="sig-label">Equipe Executora (Recebido)</div>
+                <div class="sig-date">DATA: ____/____/____</div>
+            </div>
+            <div class="sig-box">
+                <div class="sig-line"></div>
+                <div class="sig-label">Encarregado (Devolução)</div>
+                <div class="sig-date">DATA: ____/____/____</div>
+            </div>
+        </footer>
+
+        <div class="footer-note">
+            Este documento é de uso interno da STMI para controle e execução de obras viárias.
+        </div>
+    </div>
+
+</body>
+
+</html>

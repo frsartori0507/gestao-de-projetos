@@ -1,0 +1,77 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 fw-bold mb-0">Membros e Usuários</h1>
+    </div>
+
+    {% if session['role'] == 'Master' %}
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Novo Membro / Usuário</h5>
+            <form action="{{ url_for('admin.add_user') }}" method="POST">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-3">
+                    <label class="form-label">Nome Completo</label>
+                    <input name="name" class="form-control" type="text" required placeholder="Ex: Maria Oliveira">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Cargo / Função</label>
+                    <select name="role" class="form-select">
+                        <option value="Técnico de Campo">Técnico de Campo</option>
+                        <option value="Responsável Técnico">Responsável Técnico</option>
+                        <option value="Técnico de Projetos">Técnico de Projetos</option>
+                        <option value="Administrador">Administrador</option>
+                        {% if session['role'] == 'Master' %}
+                        <option value="Master">Master</option>
+                        {% endif %}
+                        <option value="Visualizador">Visualizador</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Senha</label>
+                    <input name="password" class="form-control" type="password" required>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" name="active" checked>
+                    <label class="form-check-label">Usuário Ativo</label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Adicionar</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="list-group shadow-sm">
+        {% for user in users %}
+        <div
+            class="list-group-item d-flex align-items-center justify-content-between p-3 {{ 'bg-light text-muted' if not user.active else '' }}">
+            <div class="d-flex align-items-center gap-3">
+                <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                    style="width: 40px; height: 40px;">
+                    {{ user.name[:2].upper() }}
+                </div>
+                <div>
+                    <h6 class="mb-0 fw-bold {{ 'text-decoration-line-through' if not user.active else '' }}">{{
+                        user.name }}</h6>
+                    <small class="text-muted">{{ user.role }}</small>
+                </div>
+            </div>
+            {% if session['role'] == 'Master' %}
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-primary"><span
+                        class="material-symbols-outlined" style="font-size: 16px;">edit</span></a>
+                <form action="{{ url_for('admin.delete_user', user_id=user.id) }}" method="POST" class="d-inline"
+                    onsubmit="return confirm('Tem certeza que deseja remover este usuário?')">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger"><span class="material-symbols-outlined"
+                            style="font-size: 16px;">delete</span></button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

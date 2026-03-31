@@ -1,0 +1,448 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="py-4 animate-fade-in">
+    <!-- Header Minimalista -->
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div class="d-flex align-items-center gap-3">
+            <a href="{{ url_for('projects.project_list') }}"
+                class="btn btn-outline-secondary rounded-circle p-2 d-flex shadow-sm hover-scale border-0 bg-white">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </a>
+            <div>
+                <h1 class="h2 fw-bold mb-0 text-dark">{% if project %}Editar Projeto{% else %}Novo Projeto{% endif %}
+                </h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}"
+                                class="text-decoration-none text-muted small">Início</a></li>
+                        <li class="breadcrumb-item active small" aria-current="page">{% if project %}Edição{% else
+                            %}Cadastro{% endif %}</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+
+        {% if project %}
+        <a href="{{ url_for('projects.project_form', project_id=project.id) }}"
+            class="btn btn-outline-primary d-flex align-items-center gap-2 rounded-pill px-4 shadow-sm hover-lift transition">
+            <span class="material-symbols-outlined">construction</span>
+            <span class="fw-bold">Gerenciar Execução</span>
+        </a>
+        {% endif %}
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger d-flex align-items-center gap-2 border-0 shadow-sm mb-4 rounded-3">
+        <span class="material-symbols-outlined">error</span> {{ error }}
+    </div>
+    {% endif %}
+
+    <form
+        action="{% if project %}{{ url_for('projects.project_cad', project_id=project.id) }}{% else %}{{ url_for('projects.project_cad') }}{% endif %}"
+        method="POST" id="cadForm">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <div class="row g-4 justify-content-center">
+            <!-- Coluna Principal: Informações Gerais -->
+            <div class="col-12 col-xl-8">
+
+                <!-- Card 1: Identificação e Documentação -->
+                <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                    <div class="card-header bg-primary text-white p-4 border-0">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-white bg-opacity-20 rounded-3 p-2">
+                                <span class="material-symbols-outlined">description</span>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold mb-0">Identificação & Documento</h5>
+                                <p class="small mb-0 opacity-75">Vincule um registro oficial ao projeto</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <div class="form-floating h-100">
+                                    <input type="text" name="project_id_manual" class="form-control fw-bold h-100"
+                                        id="projectNumber"
+                                        value="{% if project %}{{ project.projectNumber }}{% else %}{{ next_project_number }}{% endif %}"
+                                        placeholder="Nº Projeto" {{ 'readonly' if project and not can_edit }}>
+                                    <label for="projectNumber">Nº do Projeto</label>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="form-floating">
+                                    <input type="date" name="date" class="form-control" id="date"
+                                        value="{% if project %}{{ project.date }}{% else %}{{ today }}{% endif %}"
+                                        {{ 'readonly' if project and not can_edit }}>
+                                    <label for="date">Data do Registro</label>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <div class="form-floating">
+                                    <select name="doc_type" class="form-select" id="docType" {{ 'disabled' if project
+                                        and not can_edit }}>
+                                        <option value="SB" {% if project and project.doc_type=='SB' %}selected{% endif
+                                            %}>SB</option>
+                                        <option value="MO" {% if project and project.doc_type=='MO' %}selected{% endif
+                                            %}>MO</option>
+                                        <option value="Outros" {% if project and project.doc_type=='Outros' %}selected{%
+                                            endif %}>Outros</option>
+                                    </select>
+                                    <label for="docType">Tipo</label>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" name="doc_number" class="form-control"
+                                        placeholder="Número do Documento"
+                                        value="{{ project.doc_number if project else '' }}">
+                                    <label>Número do Documento</label>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <div class="form-floating">
+                                    <input type="number" name="doc_year" class="form-control"
+                                        value="{% if project %}{{ project.doc_year }}{% else %}{{ today[:4] }}{% endif %}">
+                                    <label>Ano</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <input type="text" name="designer" class="form-control" list="team-list"
+                                        placeholder="Responsável Técnico"
+                                        value="{{ project.designer if project else '' }}">
+                                    <label>Responsável Técnico</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Ordem de Serviço (O.S.) -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="text-primary fw-bold text-uppercase small mb-0 d-flex align-items-center gap-2">
+                                <span class="material-symbols-outlined fs-5">assignment</span> Ordem de Serviço (O.S.)
+                            </h6>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="open_os" id="toggleOS" {% if
+                                    project and project.osNumber %}checked{% endif %} {% if project and
+                                    project.is_printed and session['role'] !='Master' %}disabled
+                                    title="Esta OS já foi impressa e não pode ser desvinculada" {% endif %}>
+                                <label class="form-check-label small text-muted" for="toggleOS">Vincular O.S.</label>
+                            </div>
+                        </div>
+
+                        <div id="osDetails"
+                            style="{% if not project or not project.osNumber %}display: none;{% endif %}">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <div class="form-floating">
+                                        <input type="text" name="os_number" class="form-control border-0 bg-light"
+                                            id="os_number" placeholder="Nº O.S."
+                                            value="{% if project and project.osNumber %}{{ project.osNumber }}{% else %}{{ next_os_number }}{% endif %}"
+                                            {% if project and project.is_printed and session['role'] !='Master'
+                                            %}readonly title="Esta OS já foi impressa e não pode ser alterada" {% endif
+                                            %}>
+                                        <label for="os_number">Número da O.S.</label>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <div class="form-floating">
+                                        <input type="date" name="os_date" class="form-control border-0 bg-light"
+                                            id="os_date"
+                                            value="{% if project and project.osDate %}{{ project.osDate }}{% else %}{{ today }}{% endif %}">
+                                        <label for="os_date">Data da O.S.</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-end mt-2">
+                                        {% if project and project.id %}
+                                        <a href="{{ url_for('projects.print_os', project_id=project.id) }}"
+                                            target="_blank"
+                                            class="btn btn-outline-secondary d-flex align-items-center gap-2 rounded-pill px-4 hover-lift transition shadow-sm">
+                                            <span class="material-symbols-outlined">print</span>
+                                            <span class="fw-bold">Imprimir OS</span>
+                                        </a>
+                                        {% else %}
+                                        <button type="button" disabled
+                                            class="btn btn-outline-secondary d-flex align-items-center gap-2 rounded-pill px-4 opacity-50 shadow-sm"
+                                            title="Salve o projeto primeiro para imprimir a OS">
+                                            <span class="material-symbols-outlined">print</span>
+                                            <span class="fw-bold">Imprimir OS</span>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Localização Detalhada -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <h6 class="text-primary fw-bold text-uppercase small mb-4 d-flex align-items-center gap-2">
+                            <span class="material-symbols-outlined fs-5">location_on</span> Endereço e Localização
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <input type="text" name="address" class="form-control border-0 bg-light fw-medium"
+                                        id="address" placeholder="Rua" required value="{{ project.address or '' }}">
+                                    <label for="address">Logradouro / Rua / Avenida</label>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" name="neighborhood" class="form-control border-0 bg-light"
+                                        placeholder="Bairro" value="{{ project.neighborhood or '' }}">
+                                    <label>Bairro / Região</label>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="form-floating">
+                                    <input type="text" name="address_number" class="form-control border-0 bg-light"
+                                        placeholder="Km" value="{{ project.address_number or '' }}">
+                                    <label>Número / Km Referência</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Observações -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h6 class="text-muted fw-bold text-uppercase small mb-3 d-flex align-items-center gap-2">
+                            <span class="material-symbols-outlined fs-5">sticky_note_2</span> Observações Complementares
+                        </h6>
+                        <textarea name="observations" class="form-control border-0 bg-light" rows="4"
+                            placeholder="Detalhes relevantes que não se encaixam nos outros campos...">{{ project.observations if project else '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna Lateral: Escopo e Ação -->
+            <div class="col-12 col-xl-4">
+
+                <!-- Card Escopo Único -->
+                <div class="card border-0 shadow-sm mb-4 bg-white">
+                    <div class="card-header bg-white border-0 pt-4 px-4 pb-0 text-center">
+                        <h5 class="fw-bold mb-0">Escopo do Projeto</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="mb-4">
+                            <div class="scope-item p-3 border rounded-3 transition hover-light mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                        <span class="material-symbols-outlined text-primary">edit_road</span> Horizontal
+                                    </label>
+                                    <div class="form-check form-switch m-0">
+                                        <input class="form-check-input" type="checkbox" name="has_horizontal" {% if not
+                                            project or project.has_horizontal %}checked{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="scope-item p-3 border rounded-3 transition hover-light mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                        <span
+                                            class="material-symbols-outlined text-success">vertical_align_center</span>
+                                        Vertical
+                                    </label>
+                                    <div class="form-check form-switch m-0">
+                                        <input class="form-check-input" type="checkbox" name="has_vertical" {% if not
+                                            project or project.has_vertical %}checked{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="scope-item p-3 border rounded-3 transition hover-light">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                        <span class="material-symbols-outlined text-warning">construction</span>
+                                        Dispositivos
+                                    </label>
+                                    <div class="form-check form-switch m-0">
+                                        <input class="form-check-input" type="checkbox" name="has_devices" {% if project
+                                            and project.has_devices %}checked{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="scope-item p-3 border rounded-3 transition hover-light">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                        <span class="material-symbols-outlined text-danger">traffic</span>
+                                        Semafórico
+                                    </label>
+                                    <div class="form-check form-switch m-0">
+                                        <input class="form-check-input" type="checkbox" name="has_semaforico" {% if
+                                            project and project.has_semaforico %}checked{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-light rounded-3 p-3 mb-4 text-center">
+                            <label class="form-label small text-uppercase fw-bold text-muted mb-2">Prioridade /
+                                Status</label>
+                            <select name="status" class="form-select border-0 bg-white fw-bold py-2" {% if project and
+                                project.status=='Finalizado' and session['role'] !='Master' %}disabled{% endif %}>
+                                <option value="Em Espera" {% if project and project.status=='Em Espera' %}selected{%
+                                    endif %}>Em Espera</option>
+                                <option value="Em Andamento" {% if project and project.status=='Em Andamento'
+                                    %}selected{% endif %}>Em Andamento</option>
+                                <option value="Em Desenvolvimento" {% if project and
+                                    project.status=='Em Desenvolvimento' %}selected{% endif %}>Em Desenvolvimento
+                                </option>
+                                <option value="Urgente" {% if project and project.status=='Urgente' %}selected{% endif
+                                    %}>Urgente</option>
+                                <option value="Concluído" {% if project and project.status=='Concluído' %}selected{%
+                                    endif %}>Concluído</option>
+                                <option value="Finalizado" {% if project and project.status=='Finalizado' %}selected{%
+                                    endif %}>Finalizado</option>
+                            </select>
+                            {% if project and project.status == 'Finalizado' and session['role'] != 'Master' %}
+                            <input type="hidden" name="status" value="Finalizado">
+                            {% endif %}
+                        </div>
+
+                        {% if can_edit %}
+                        <button type="submit"
+                            class="btn btn-primary w-100 py-3 fw-bold shadow-lg d-flex align-items-center justify-content-center gap-2 hover-lift transition rounded-pill">
+                            <span class="material-symbols-outlined">save</span> {% if project %}ATUALIZAR DADOS{% else
+                            %}SALVAR PROJETO{% endif %}
+                        </button>
+                        {% else %}
+                        <div
+                            class="alert alert-light border-0 small text-muted d-flex align-items-center justify-content-center gap-2 mb-0 py-3 rounded-pill bg-white shadow-sm">
+                            <span class="material-symbols-outlined" style="font-size: 18px;">lock</span>
+                            Este projeto está finalizado e bloqueado para edições (Apenas Master).
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+    :root {
+        --primary-color: #137fec;
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(15px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .transition {
+        transition: all 0.3s ease;
+    }
+
+    .hover-lift:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 20px rgba(19, 127, 236, 0.25) !important;
+    }
+
+    .hover-scale:hover {
+        transform: scale(1.1);
+    }
+
+    .hover-light:hover {
+        background-color: #f1f8ff;
+        border-color: var(--primary-color) !important;
+    }
+
+    .card {
+        border-radius: 16px;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        box-shadow: none;
+        border-color: var(--primary-color);
+        background-color: #fff !important;
+    }
+
+    .scope-item {
+        border: 1px solid #eee;
+        background-color: #fafafa;
+    }
+
+    .breadcrumb-item+.breadcrumb-item::before {
+        color: #ccc;
+    }
+
+    /* Personalização do Switch */
+    .form-check-input:checked {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+</style>
+
+<script>
+    document.getElementById('toggleOS').addEventListener('change', function () {
+        const details = document.getElementById('osDetails');
+        if (this.checked) {
+            details.style.display = 'block';
+            details.classList.add('animate-fade-in');
+
+            // Auto-salvamento rápido via AJAX se o projeto já existir
+            {% if project and project.id %}
+            const osNum = document.getElementById('os_number').value;
+            const osDate = document.getElementById('os_date').value;
+
+            fetch(`/project/{{ project.id }}/update_os_quick`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    os_number: osNum,
+                    os_date: osDate
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log("OS vinculada e salva no banco.");
+                        // Ativa o link de impressão se estava desativado
+                        const printBtn = document.querySelector('a[href*="print_os"]');
+                        if (!printBtn) {
+                            location.reload(); // Recarrega para injetar o link se for a primeira vez
+                        }
+                    }
+                })
+                .catch(error => console.error('Erro ao salvar OS:', error));
+            {% endif %}
+        } else {
+            details.style.display = 'none';
+        }
+    });
+</script>
+
+<!-- Datalist para autocomplete -->
+<datalist id="team-list">
+    {% for member in team_members %}
+    <option value="{{ member.name }}">{{ member.role }}</option>
+    {% endfor %}
+</datalist>
+{% endblock %}

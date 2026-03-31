@@ -1,0 +1,355 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 fw-bold mb-0">Projetos</h1>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('projects.export_csv', search=search_query, status=status_filter, responsible=responsible_filter, start_date=start_date, end_date=end_date) }}"
+                class="btn btn-outline-success d-flex align-items-center gap-2 shadow-sm rounded-pill px-3"
+                title="Exportar projetos filtrados para Excel/CSV">
+                <span class="material-symbols-outlined">download</span> <span class="d-none d-lg-inline">CSV</span>
+            </a>
+            {% if can_edit %}
+            <a href="{{ url_for('projects.project_form') }}"
+                class="btn btn-outline-primary d-flex align-items-center gap-2 shadow-sm rounded-pill px-3">
+                <span class="material-symbols-outlined">construction</span> Novo Serviço
+            </a>
+            <a href="{{ url_for('projects.project_cad') }}"
+                class="btn btn-primary d-flex align-items-center gap-2 shadow-sm rounded-pill px-3">
+                <span class="material-symbols-outlined">add</span> Novo Projeto
+            </a>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- Painel de Filtros Avançado -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <form action="{{ url_for('projects.project_list') }}" method="GET" id="filterForm">
+                <div class="row g-3">
+                    <!-- Busca Principal -->
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Busca Geral</label>
+                        <div class="input-group overflow-hidden rounded-3 border">
+                            <span class="input-group-text bg-white border-0 text-muted">
+                                <span class="material-symbols-outlined">search</span>
+                            </span>
+                            <input name="search" value="{{ search_query or '' }}"
+                                class="form-control border-0 ps-0 py-2" placeholder="Endereço, OS, técnico ou número..."
+                                type="text" />
+                        </div>
+                    </div>
+
+                    <!-- Ordenação -->
+                    <div class="col-12 col-md-4 col-lg-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Ordenar por</label>
+                        <select name="sort" class="form-select rounded-3 py-2 border" onchange="this.form.submit()">
+                            <option value="date_desc" {% if sort_by=='date_desc' %}selected{% endif %}>Mais Recentes
+                            </option>
+                            <option value="date_asc" {% if sort_by=='date_asc' %}selected{% endif %}>Mais Antigos
+                            </option>
+                            <option value="prog_desc" {% if sort_by=='prog_desc' %}selected{% endif %}>Maior Progresso
+                            </option>
+                            <option value="prog_asc" {% if sort_by=='prog_asc' %}selected{% endif %}>Menor Progresso
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Filtro por Responsável -->
+                    <div class="col-12 col-md-4 col-lg-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Responsável</label>
+                        <select name="responsible" class="form-select rounded-3 py-2 border"
+                            onchange="this.form.submit()">
+                            <option value="">Todos</option>
+                            {% for member in team_members %}
+                            <option value="{{ member.name }}" {% if responsible_filter==member.name %}selected{% endif
+                                %}>{{ member.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Botão de Ver Tudo / Limpar -->
+                    <div class="col-12 col-md-6 col-lg-3 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-primary fw-bold flex-grow-1 py-2">Aplicar</button>
+                        {% if search_query or status_filter or responsible_filter or start_date or end_date or show_all
+                        %}
+                        <a href="{{ url_for('projects.project_list') }}" class="btn btn-outline-secondary py-2"
+                            title="Limpar Filtros">
+                            <span class="material-symbols-outlined align-middle">filter_alt_off</span>
+                        </a>
+                        {% endif %}
+                    </div>
+
+                    <!-- Filtros Secundários -->
+                    <div class="col-12">
+                        <hr class="my-2 opacity-10">
+                    </div>
+
+                    <!-- Status como Chips/Pills -->
+                    <div class="col-12 col-lg-7">
+                        <label class="form-label small fw-bold text-muted text-uppercase d-block mb-3">Filtrar por
+                            Status</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <input type="radio" class="btn-check" name="status" id="st_all" value="" {% if not
+                                status_filter %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="btn btn-sm btn-outline-secondary rounded-pill px-3" for="st_all">Todos</label>
+
+                            <input type="radio" class="btn-check" name="status" id="st_urg" value="Urgente" {% if
+                                status_filter=='Urgente' %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="btn btn-sm btn-outline-danger rounded-pill px-3" for="st_urg">Urgente</label>
+
+                            <input type="radio" class="btn-check" name="status" id="st_and" value="Em Andamento" {% if
+                                status_filter=='Em Andamento' %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="btn btn-sm btn-outline-warning rounded-pill px-3" for="st_and">Em
+                                Andamento</label>
+
+                            <input type="radio" class="btn-check" name="status" id="st_dev" value="Em Desenvolvimento"
+                                {% if status_filter=='Em Desenvolvimento' %}checked{% endif %}
+                                onchange="this.form.submit()">
+                            <label class="btn btn-sm btn-outline-secondary rounded-pill px-3" for="st_dev">Em
+                                Desenvolvimento</label>
+
+                            <input type="radio" class="btn-check" name="status" id="st_esp" value="Em Espera" {% if
+                                status_filter=='Em Espera' %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="btn btn-sm btn-outline-primary rounded-pill px-3" for="st_esp">Em
+                                Espera</label>
+
+                            <input type="radio" class="btn-check" name="status" id="st_con" value="Concluído" {% if
+                                status_filter=='Concluído' %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="btn btn-sm btn-outline-success rounded-pill px-3"
+                                for="st_con">Concluído</label>
+
+                            <input type="radio" class="btn-check" name="status" id="st_fin" value="Finalizado" {% if
+                                status_filter=='Finalizado' %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="btn btn-sm btn-outline-info rounded-pill px-3" for="st_fin">Finalizado</label>
+                        </div>
+                    </div>
+
+                    <!-- Datas -->
+                    <div class="col-12 col-lg-5">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Período de Registro</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="date" name="start_date" value="{{ start_date or '' }}"
+                                class="form-control form-control-sm rounded-3 border py-2 text-muted">
+                            <span class="text-muted">até</span>
+                            <input type="date" name="end_date" value="{{ end_date or '' }}"
+                                class="form-control form-control-sm rounded-3 border py-2 text-muted">
+                        </div>
+                    </div>
+                </div>
+
+                {% if show_all %}
+                <input type="hidden" name="show_all" value="1">
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabela para Desktop -->
+    <div class="card border-0 shadow-sm d-none d-md-block">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 py-3 text-muted small text-uppercase">Projeto / OS</th>
+                        <th class="py-3 text-muted small text-uppercase">Endereço</th>
+                        <th class="py-3 text-muted small text-uppercase">Status</th>
+                        <th class="py-3 text-muted small text-uppercase">Progresso</th>
+                        <th class="pe-4 py-3 text-end text-muted small text-uppercase">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in projects %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-bold text-dark">{{ project.projectNumber }}</div>
+                            <div class="small text-muted">
+                                {% if project.osNumber %}
+                                <span class="ms-1 border-start ps-1">{{ project.osNumber }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-medium text-dark">{{ project.address }}</div>
+                            <div class="small text-muted">{% if project.designer %}🛠️ {{ project.designer }}{% else
+                                %}Sem responsável{% endif %}</div>
+                        </td>
+                        <td>
+                            {% if project.status == 'Em Andamento' %}
+                            <span
+                                class="badge bg-warning bg-opacity-10 text-warning border border-warning-subtle rounded-pill">Em
+                                Andamento</span>
+                            {% elif project.status == 'Urgente' %}
+                            <span
+                                class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle rounded-pill">Urgente</span>
+                            {% elif project.status == 'Concluído' %}
+                            <span
+                                class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill">Concluído</span>
+                            {% elif project.status == 'Finalizado' %}
+                            <span
+                                class="badge bg-info bg-opacity-10 text-info border border-info-subtle rounded-pill">Finalizado</span>
+                            {% elif project.status == 'Em Espera' %}
+                            <span
+                                class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill">Em
+                                Espera</span>
+                            {% elif project.status == 'Em Desenvolvimento' %}
+                            <span
+                                class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle rounded-pill">Em
+                                Desenvolvimento</span>
+                            {% else %}
+                            <span
+                                class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle rounded-pill">{{
+                                project.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="min-width: 180px;">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1 shadow-sm"
+                                    style="height: 8px; background-color: #e9ecef;">
+                                    <div class="progress-bar {{ 'bg-success' if project.progress == 100 else 'bg-primary' }}"
+                                        role="progressbar" style="--w: {{ project.progress }}%; width: var(--w);"
+                                        aria-valuenow="{{ project.progress }}" aria-valuemin="0" aria-valuemax="100">
+                                    </div>
+                                </div>
+                                <span class="small fw-bold text-dark">{{ project.progress }}%</span>
+                            </div>
+                        </td>
+                        <td class="pe-4 text-end">
+                            <div class="btn-group gap-1">
+                                <a href="{{ url_for('projects.project_form', project_id=project.id) }}"
+                                    class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 px-2 rounded"
+                                    title="Serviços / Execução">
+                                    <span class="material-symbols-outlined" style="font-size: 18px;">construction</span>
+                                    <span class="small fw-bold d-none d-lg-inline">Serviços</span>
+                                </a>
+                                <a href="{{ url_for('projects.project_cad', project_id=project.id) }}"
+                                    class="btn btn-sm btn-light text-muted" title="Editar Dados Base">
+                                    <span class="material-symbols-outlined" style="font-size: 18px;">edit_note</span>
+                                </a>
+                            </div>
+                        </td>
+
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">Nenhum projeto encontrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Lista em Cards para Mobile -->
+    <div class="d-md-none">
+        {% for project in projects %}
+        <div class="card mb-3 border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <div class="fw-bold text-dark">{{ project.projectNumber }}</div>
+                        <div class="small text-muted">{{ project.osNumber }}</div>
+                    </div>
+                    {% if project.status == 'Em Andamento' %}
+                    <span
+                        class="badge bg-warning bg-opacity-10 text-warning border border-warning-subtle rounded-pill">Em
+                        Andamento</span>
+                    {% elif project.status == 'Urgente' %}
+                    <span
+                        class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle rounded-pill">Urgente</span>
+                    {% elif project.status == 'Concluído' %}
+                    <span
+                        class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill">Concluído</span>
+                    {% elif project.status == 'Finalizado' %}
+                    <span
+                        class="badge bg-info bg-opacity-10 text-info border border-info-subtle rounded-pill">Finalizado</span>
+                    {% elif project.status == 'Em Espera' %}
+                    <span
+                        class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill">Em
+                        Espera</span>
+                    {% elif project.status == 'Em Desenvolvimento' %}
+                    <span
+                        class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle rounded-pill">Em
+                        Desenvolvimento</span>
+                    {% endif %}
+                </div>
+                <div class="fw-medium text-dark mb-1">{{ project.address }}</div>
+                <div class="small text-muted mb-3">
+                    {% if project.designer %}🛠️ {{ project.designer }}{% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span>Progresso Geral</span>
+                        <span class="fw-bold text-dark">{{ project.progress }}%</span>
+                    </div>
+                    <div class="progress shadow-sm" style="height: 6px;">
+                        <div class="progress-bar {{ 'bg-success' if project.progress == 100 else 'bg-primary' }}"
+                            style="--w: {{ project.progress }}%; width: var(--w);"></div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{{ url_for('projects.project_form', project_id=project.id) }}"
+                        class="btn btn-primary btn-sm d-flex align-items-center gap-1 rounded-pill px-3">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">construction</span> Serviços
+                    </a>
+                    <a href="{{ url_for('projects.project_cad', project_id=project.id) }}"
+                        class="btn btn-light btn-sm d-flex align-items-center gap-1">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">edit_note</span> Dados
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">Nenhum projeto encontrado.</div>
+        {% endfor %}
+    </div>
+
+    <!-- Paginação -->
+    {% if pagination and pagination.pages > 1 %}
+    <nav aria-label="Navegação das páginas" class="mt-4 d-flex justify-content-center">
+        <ul class="pagination pagination-sm shadow-sm gap-1">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link rounded-pill border-0"
+                    href="{{ url_for('projects.project_list', page=pagination.prev_num, search=search_query, status=status_filter, responsible=responsible_filter, start_date=start_date, end_date=end_date, sort=sort_by) if pagination.has_prev else '#' }}"
+                    title="Anterior">
+                    <span class="material-symbols-outlined"
+                        style="font-size: 18px; vertical-align: middle;">chevron_left</span>
+                </a>
+            </li>
+
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if page_num %}
+            <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                <a class="page-link {% if page_num == pagination.page %}rounded-pill border-0{% else %}rounded-circle border-0 text-muted bg-transparent{% endif %} px-3"
+                    href="{{ url_for('projects.project_list', page=page_num, search=search_query, status=status_filter, responsible=responsible_filter, start_date=start_date, end_date=end_date, sort=sort_by) }}">{{
+                    page_num }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link border-0 bg-transparent text-muted">...</span></li>
+            {% endif %}
+            {% endfor %}
+
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link rounded-pill border-0"
+                    href="{{ url_for('projects.project_list', page=pagination.next_num, search=search_query, status=status_filter, responsible=responsible_filter, start_date=start_date, end_date=end_date, sort=sort_by) if pagination.has_next else '#' }}"
+                    title="Próximo">
+                    <span class="material-symbols-outlined"
+                        style="font-size: 18px; vertical-align: middle;">chevron_right</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <div class="text-center mt-2 small text-muted">Mostrando {{ pagination.items|length }} de {{ pagination.total }}
+        projetos.</div>
+    {% elif not pagination and not projects %}
+    {% elif not pagination and projects|length > 0 %}
+    <div class="text-center mt-4 small text-muted">Mostrando {{ projects|length }} projetos encontrados.</div>
+    {% elif pagination and pagination.total > 0 %}
+    <div class="text-center mt-4 small text-muted">Mostrando todos os {{ pagination.total }} projetos.</div>
+    {% endif %}
+</div>
+{% endblock %}

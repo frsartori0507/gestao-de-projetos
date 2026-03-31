@@ -1,0 +1,122 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-0">Log de Atividades</h1>
+            <p class="text-muted small mb-0">Histórico completo de ações no sistema</p>
+        </div>
+        <a href="{{ url_for('main.dashboard') }}"
+            class="btn btn-outline-secondary d-flex align-items-center gap-2 rounded-pill px-3 py-2">
+            <span class="material-symbols-outlined">arrow_back</span> Voltar
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 py-3 text-muted small text-uppercase" style="width: 200px;">Data e Hora</th>
+                        <th class="py-3 text-muted small text-uppercase" style="width: 150px;">Usuário</th>
+                        <th class="py-3 text-muted small text-uppercase">Ação Realizada</th>
+                        <th class="pe-4 py-3 text-end text-muted small text-uppercase">Projeto / OS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs.items %}
+                    <tr>
+                        <td class="ps-4 py-3">
+                            <span class="fw-medium">{{ log.timestamp.strftime('%d/%m/%Y') }}</span>
+                            <span class="text-muted small ms-1">{{ log.timestamp.strftime('%H:%M:%S') }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary bg-opacity-10 text-primary rounded-circle p-1"
+                                    style="width: 24px; height: 24px; font-size: 10px; display: flex; align-items:center; justify-content:center;">
+                                    {{ log.user_name[:1].upper() }}
+                                </span>
+                                <span class="fw-bold small">{{ log.user_name }}</span>
+                            </div>
+                        </td>
+                        <td class="small">{{ log.action }}</td>
+                        <td class="pe-4 text-end">
+                            {% if log.project_id %}
+                            <a href="{{ url_for('projects.project_form', project_id=log.project_id) }}"
+                                class="btn btn-sm btn-light border py-1 px-2 rounded-pill shadow-xs"
+                                style="font-size: 11px;">
+                                <span class="material-symbols-outlined align-middle"
+                                    style="font-size: 14px;">visibility</span> Ver OS
+                            </a>
+                            {% else %}
+                            <span class="text-muted small">---</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-muted">
+                            <span class="material-symbols-outlined d-block mb-2"
+                                style="font-size: 48px; opacity: 0.2;">history</span>
+                            Nenhuma atividade registrada ainda.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Paginação -->
+    {% if logs.pages > 1 %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center gap-1">
+            <li class="page-item {{ 'disabled' if not logs.has_prev }}">
+                <a class="page-link rounded-pill border-0 shadow-sm"
+                    href="{{ url_for('admin.activity_log_view', page=logs.prev_num) if logs.has_prev else '#' }}">
+                    <span class="material-symbols-outlined align-middle">chevron_left</span>
+                </a>
+            </li>
+
+            {% for page_num in logs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if page_num %}
+            <li class="page-item {{ 'active' if page_num == logs.page }}">
+                <a class="page-link rounded-pill border-0 shadow-sm fw-bold px-3"
+                    href="{{ url_for('admin.activity_log_view', page=page_num) }}">{{ page_num }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link border-0 bg-transparent">...</span></li>
+            {% endif %}
+            {% endfor %}
+
+            <li class="page-item {{ 'disabled' if not logs.has_next }}">
+                <a class="page-link rounded-pill border-0 shadow-sm"
+                    href="{{ url_for('admin.activity_log_view', page=logs.next_num) if logs.has_next else '#' }}">
+                    <span class="material-symbols-outlined align-middle">chevron_right</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<style>
+    .shadow-xs {
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .page-item.active .page-link {
+        background-color: #137fec !important;
+        border-color: #137fec !important;
+    }
+
+    .page-link {
+        color: #6c757d;
+    }
+
+    .page-link:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório Geral de Projetos - STMI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        rel="stylesheet" />
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            background-color: #f8f9fa;
+        }
+
+        .report-page {
+            background: white;
+            padding: 15mm;
+            margin: 0 auto 20px auto;
+            max-width: 210mm;
+            /* Changed to A4 width for better compatibility */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+
+            body {
+                background: white;
+                margin: 0;
+                padding: 0;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .report-page {
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+                page-break-after: avoid;
+                page-break-inside: auto;
+                border: none;
+            }
+
+            .report-page+.report-page {
+                margin-top: 30px;
+                page-break-before: auto;
+            }
+
+            .card-summary {
+                page-break-inside: avoid;
+            }
+
+            table {
+                page-break-inside: auto;
+            }
+
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+        }
+
+        .qr-code {
+            width: 60px;
+            height: 60px;
+            border: 1px solid #eee;
+            padding: 2px;
+        }
+
+        .auth-seal {
+            border-left: 3px solid #137fec;
+            padding-left: 10px;
+            text-align: left;
+        }
+
+        header {
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .status-badge {
+            font-size: 0.9rem;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .table-os {
+            font-size: 0.85rem;
+        }
+
+        .table-os th {
+            background-color: #343a40 !important;
+            color: white !important;
+            padding: 10px;
+        }
+
+        .text-truncate-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body class="p-0 p-lg-4">
+
+    <!-- html2pdf Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- Botões de Ação (Não aparecem na impressão) -->
+    <div class="no-print position-fixed top-0 end-0 p-3 d-flex gap-2 z-3">
+        <a href="{{ url_for('main.dashboard') }}"
+            class="btn btn-light border shadow-sm d-flex align-items-center gap-2">
+            <span class="material-symbols-outlined">arrow_back</span> Voltar
+        </a>
+        <button id="shareBtn" onclick="sharePDF()" class="btn btn-success shadow-sm d-flex align-items-center gap-2"
+            style="background-color: #25D366; border-color: #25D366;">
+            <span class="material-symbols-outlined">share</span> Compartilhar PDF
+        </button>
+        <button onclick="window.print()" class="btn btn-primary shadow-sm d-flex align-items-center gap-2">
+            <span class="material-symbols-outlined">print</span> Imprimir
+        </button>
+    </div>
+
+    <!-- Filtro de Período (Não aparece na impressão) -->
+    <div class="no-print bg-white p-3 border-bottom shadow-sm mb-4 sticky-top" style="z-index: 2;">
+        <div class="container-fluid">
+            <form method="GET" action="{{ url_for('main.report') }}"
+                class="row g-3 align-items-end justify-content-center">
+                <div class="col-auto">
+                    <label class="form-label small fw-bold text-muted">Selecionar Mês</label>
+                    <input type="month" name="month" class="form-control form-control-sm"
+                        value="{{ selected_month or '' }}">
+                </div>
+                <div class="col-auto">
+                    <label class="form-label small fw-bold text-muted">Busca Rápida</label>
+                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Endereço, OS..."
+                        value="{{ search_query or '' }}" style="min-width: 150px;">
+                </div>
+                <div class="col-auto">
+                    <label class="form-label small fw-bold text-muted">Filtrar Status</label>
+                    <div class="d-flex gap-2 flex-wrap">
+                        {% for status in ['Urgente', 'Em Andamento', 'Em Desenvolvimento', 'Em Espera', 'Concluído',
+                        'Finalizado'] %}
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" name="status" value="{{ status }}"
+                                id="status_{{ loop.index }}" {% if not selected_statuses or status in selected_statuses
+                                %}checked{% endif %}>
+                            <label class="form-check-label small" for="status_{{ loop.index }}">{{ status }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-dark btn-sm d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">filter_alt</span> Aplicar
+                        Filtros
+                    </button>
+                </div>
+                {% if selected_month or selected_statuses or search_query %}
+                <div class="col-auto">
+                    <a href="{{ url_for('main.report') }}"
+                        class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">close</span> Ver Todos
+                    </a>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <script>
+        async function sharePDF() {
+            const btn = document.getElementById('shareBtn');
+            const originalContent = btn.innerHTML;
+
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Gerando...';
+            btn.disabled = true;
+
+            const element = document.getElementById('report-content');
+
+            const opt = {
+                margin: 0,
+                filename: 'Relatorio_STMI.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            try {
+                const date = "{{ generation_date.strftime('%d/%m/%Y') }}";
+                const msg = encodeURIComponent(`*Relatório de Projetos - STMI*\n📅 Data: ${date}\n\nSegue o relatório em PDF anexo.`);
+                const whatsappUrl = `https://wa.me/?text=${msg}`;
+
+                if (navigator.share && navigator.canShare) {
+                    const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+                    const file = new File([pdfBlob], 'Relatorio_STMI.pdf', { type: 'application/pdf' });
+
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            files: [file],
+                            title: 'Relatório STMI',
+                            text: 'Segue o relatório de projetos - STMI',
+                        });
+                        btn.innerHTML = originalContent;
+                        btn.disabled = false;
+                        return;
+                    }
+                }
+
+                await html2pdf().set(opt).from(element).save();
+                window.open(whatsappUrl, '_blank');
+
+                setTimeout(() => {
+                    alert("O PDF foi baixado para o seu computador.\n\nO WhatsApp foi aberto em uma nova aba. Por favor, arraste o arquivo PDF baixado para a conversa.");
+                }, 1000);
+
+            } catch (error) {
+                console.error('Erro ao gerar/compartilhar PDF:', error);
+                alert('Ocorreu um erro ao gerar o PDF. Verifique o console para mais detalhes.');
+            } finally {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        }
+    </script>
+
+    <!-- Conteúdo do Relatório -->
+    <div id="report-content">
+        <!-- PÁGINA 1: RESUMO EXECUTIVO -->
+        <div class="report-page mx-auto shadow-sm">
+            <header class="d-flex justify-content-between align-items-end mb-5">
+                <div>
+                    <h1 class="h2 fw-bold text-uppercase mb-0">Resumo Executivo</h1>
+                    <p class="text-muted mb-0">STMI - Sistema de Gestão Integrada</p>
+                </div>
+                <div class="text-end">
+                    <p class="small text-muted text-uppercase fw-bold mb-0">Relatório Consolidado</p>
+                    <p class="fw-medium mb-0">{{ generation_date.strftime('%d/%m/%Y') }}</p>
+                </div>
+            </header>
+
+            <div class="row g-2 mb-4 mt-2">
+                <div class="col">
+                    <div
+                        class="p-2 card-summary bg-success bg-opacity-10 border border-success-subtle rounded-3 h-100 d-flex flex-column justify-content-center align-items-center text-center">
+                        <span class="material-symbols-outlined text-success" style="font-size: 1.8rem;">task_alt</span>
+                        <h4 class="fw-bold text-success mb-0">{{ stats.concluded }}</h4>
+                        <span class="fw-bold text-success text-uppercase opacity-75"
+                            style="font-size: 0.6rem;">Concluídos</span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div
+                        class="p-2 card-summary bg-info bg-opacity-10 border border-info-subtle rounded-3 h-100 d-flex flex-column justify-content-center align-items-center text-center">
+                        <span class="material-symbols-outlined text-info" style="font-size: 1.8rem;">verified</span>
+                        <h4 class="fw-bold text-info mb-0">{{ stats.finalized }}</h4>
+                        <span class="fw-bold text-info text-uppercase opacity-75"
+                            style="font-size: 0.6rem;">Finalizados</span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div
+                        class="p-2 card-summary bg-warning bg-opacity-10 border border-warning-subtle rounded-3 h-100 d-flex flex-column justify-content-center align-items-center text-center">
+                        <span class="material-symbols-outlined text-warning"
+                            style="font-size: 1.8rem;">pending_actions</span>
+                        <h4 class="fw-bold text-warning mb-0">{{ stats.in_progress }}</h4>
+                        <span class="fw-bold text-warning text-uppercase opacity-75" style="font-size: 0.6rem;">Em
+                            Andamento</span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div
+                        class="p-2 card-summary bg-secondary bg-opacity-10 border border-secondary-subtle rounded-3 h-100 d-flex flex-column justify-content-center align-items-center text-center">
+                        <span class="material-symbols-outlined text-secondary"
+                            style="font-size: 1.8rem;">settings_suggest</span>
+                        <h4 class="fw-bold text-secondary mb-0">{{ stats.developing }}</h4>
+                        <span class="fw-bold text-secondary text-uppercase opacity-75" style="font-size: 0.6rem;">Em
+                            Desenv.</span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div
+                        class="p-2 card-summary bg-primary bg-opacity-10 border border-primary-subtle rounded-3 h-100 d-flex flex-column justify-content-center align-items-center text-center">
+                        <span class="material-symbols-outlined text-primary"
+                            style="font-size: 1.8rem;">hourglass_empty</span>
+                        <h4 class="fw-bold text-primary mb-0">{{ stats.waiting }}</h4>
+                        <span class="fw-bold text-primary text-uppercase opacity-75"
+                            style="font-size: 0.6rem;">Aguardando</span>
+                    </div>
+                </div>
+                <div class="col">
+                    <div
+                        class="p-2 card-summary bg-danger bg-opacity-10 border border-danger-subtle rounded-3 h-100 d-flex flex-column justify-content-center align-items-center text-center">
+                        <span class="material-symbols-outlined text-danger"
+                            style="font-size: 1.8rem;">priority_high</span>
+                        <h4 class="fw-bold text-danger mb-0">{{ stats.urgent }}</h4>
+                        <span class="fw-bold text-danger text-uppercase opacity-75"
+                            style="font-size: 0.6rem;">Urgentes</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-5 p-4 border rounded-4 bg-light">
+                <h4 class="h5 fw-bold mb-3 d-flex align-items-center gap-2">
+                    <span class="material-symbols-outlined">analytics</span> Visão Geral do Período
+                </h4>
+                <p class="text-muted" style="line-height: 1.6;">
+                    Este relatório apresenta o status consolidado de todos os projetos ativos no sistema STMI
+                    {% if selected_month %}
+                    referentes ao mês de <strong>{{ month_name }}</strong>.
+                    {% else %}
+                    até a data de <strong>{{ generation_date.strftime('%d/%m/%Y') }}</strong>.
+                    {% endif %}
+                    Ao todo, o sistema contabiliza <strong>{{ stats.total }}</strong> projetos sob gestão neste
+                    intervalo, distribuídos
+                    entre as fases de planejamento, execução e conclusão.
+                </p>
+                <hr class="my-4">
+                <div class="row text-center">
+                    <div class="col">
+                        <p class="small text-muted text-uppercase mb-1">Capacidade Operacional</p>
+                        <p class="h4 fw-bold">{{ (stats.total - stats.concluded - stats.finalized) }} Ativos</p>
+                    </div>
+                    <div class="col border-start">
+                        <p class="small text-muted text-uppercase mb-1">Eficiência</p>
+                        <p class="h4 fw-bold">{{ "%.0f"|format(((stats.concluded + stats.finalized) / stats.total * 100)
+                            if stats.total > 0
+                            else 0) }}% Concluído</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="no-print mt-auto pt-4 border-top text-muted text-center small">
+                <div>Relatório gerado por: <strong>{{ user_name }}</strong> em {{ generation_date.strftime('%d/%m/%Y')
+                    }}</div>
+            </div>
+        </div>
+
+        <!-- PÁGINA 2: DETALHAMENTO (Unificado) -->
+        <div class="report-page mx-auto shadow-sm">
+            <!-- Cabeçalho -->
+            <header class="d-flex justify-content-between align-items-end mb-4">
+                <div>
+                    <h1 class="h3 fw-bold text-uppercase mb-0">Listagem de Projetos</h1>
+                    <p class="text-muted small mb-0">STMI - Sistema de Gestão Integrada</p>
+                </div>
+                <div class="text-end">
+                    <p class="small text-muted text-uppercase fw-bold mb-0">Detalhamento Geral</p>
+                    <p class="fw-medium mb-0">{{ generation_date.strftime('%d/%m/%Y') }}</p>
+                </div>
+            </header>
+
+            {% for status in active_statuses %}
+            <!-- Título da Seção do Status -->
+            <div class="mb-3 {% if not loop.first %}mt-5{% endif %}">
+                <span class="status-badge 
+                    {% if status == 'Concluído' %}bg-success text-white
+                    {% elif status == 'Finalizado' %}bg-info text-white
+                    {% elif status == 'Urgente' %}bg-danger text-white
+                    {% elif status == 'Em Andamento' %}bg-warning text-dark
+                    {% elif status == 'Em Desenvolvimento' %}bg-secondary text-white
+                    {% elif status == 'Em Espera' %}bg-primary text-white
+                    {% else %}bg-secondary text-white{% endif %}">
+                    Projetos com Status: {{ status }} ({{ projects_by_status[status]|length }})
+                </span>
+            </div>
+
+            <!-- Tabela de Dados -->
+            <table class="table table-sm table-hover align-middle table-os mb-4">
+                <thead>
+                    <tr class="table-dark">
+                        <th>Projeto / OS</th>
+                        <th>Endereço / Local</th>
+                        <th class="text-center">Prog.</th>
+                        <th class="text-center">Responsável</th>
+                        <th class="text-center">Obs.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in projects_by_status[status] %}
+                    <tr>
+                        <td class="fw-bold" style="width: 15%;">
+                            <div>{{ project.projectNumber }}</div>
+                            <div class="small fw-normal text-muted" style="font-size: 0.75rem;">
+                                {{ project.osNumber }}
+                            </div>
+                        </td>
+                        <td style="width: 35%;">
+                            <div>
+                                {{ project.address }}
+                                {% if project.address_number %}, {{ project.address_number }}{% endif %}
+                                {% if project.neighborhood %} - {{ project.neighborhood }}{% endif %}
+                            </div>
+                            <div class="small text-muted d-flex gap-2" style="font-size: 0.75rem;">
+                                {% if project.has_horizontal %}<span>H: {{ project.h_progress }}%</span>{% endif %}
+                                {% if project.has_vertical %}<span>V: {{ project.v_progress }}%</span>{% endif %}
+                                {% if project.has_devices %}<span>D: {{ project.d_progress }}%</span>{% endif %}
+                                {% if project.has_semaforico %}<span>S: {{ project.s_progress }}%</span>{% endif %}
+                            </div>
+                        </td>
+                        <td class="text-center fw-bold" style="width: 10%;">
+                            {{ project.progress }}%
+                        </td>
+                        <td class="text-center small text-muted" style="width: 15%;">
+                            {% if project.designer %}
+                            <div class="text-dark mb-1">{{ project.designer|abbreviate_name }}</div>
+                            {% endif %}
+                            <div class="d-flex flex-column" style="font-size: 0.7rem;">
+                                {% if project.has_horizontal and project.h_responsible %}
+                                <div><span class="">H:</span> {{ project.h_responsible|abbreviate_name }}</div>
+                                {% endif %}
+                                {% if project.has_vertical and project.v_responsible %}
+                                <div><span class="">V:</span> {{ project.v_responsible|abbreviate_name }}</div>
+                                {% endif %}
+                                {% if project.has_devices and project.d_responsible %}
+                                <div><span class="">D:</span> {{ project.d_responsible|abbreviate_name }}</div>
+                                {% endif %}
+                                {% if project.has_semaforico and project.s_responsible %}
+                                <div><span class="">S:</span> {{ project.s_responsible|abbreviate_name }}</div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="small text-muted text-center"
+                            style="font-size: 0.8rem; line-height: 1.1; width: 25%;">
+                            <div class="text-truncate-2" title="{{ project.observations }}">
+                                {{ project.observations if project.observations else '---' }}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endfor %}
+
+            <!-- Rodapé da Página -->
+            <div class="no-print mt-5 pt-4 border-top text-muted text-center small">
+                <div>Relatório gerado por: <strong>{{ user_name }}</strong> em {{ generation_date.strftime('%d/%m/%Y')
+                    }}</div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

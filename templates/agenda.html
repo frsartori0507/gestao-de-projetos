@@ -1,0 +1,92 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 fw-bold mb-0">Agenda</h1>
+        <button type="button" class="btn btn-primary d-flex align-items-center gap-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#newEventModal">
+            <span class="material-symbols-outlined">add</span> Novo Evento
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="list-group list-group-flush">
+            {% for item in agenda_items %}
+            <div class="list-group-item p-3 d-flex align-items-center gap-3 border-bottom-0">
+                <div class="d-flex flex-column align-items-center justify-content-center rounded-3 {{ 'bg-primary bg-opacity-10 text-primary' if item.type == 'project' else 'bg-warning bg-opacity-10 text-warning' }}" style="width: 50px; height: 50px;">
+                    <span class="small fw-bold text-uppercase" style="font-size: 0.65rem; line-height: 1;">{{ item.date[5:7] if item.date and item.date|length >= 7 else '--' }}</span>
+                    <span class="h5 fw-bold mb-0" style="line-height: 1;">{{ item.date[8:10] if item.date and item.date|length >= 10 else '--' }}</span>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="mb-1 fw-bold text-dark">{{ item.title }}</h6>
+                    <div class="d-flex align-items-center gap-3 text-muted small">
+                        <span class="d-flex align-items-center gap-1"><span class="material-symbols-outlined" style="font-size: 16px;">{{ item.icon }}</span> {{ item.subtitle }}</span>
+                        {% if item.time %}
+                        <span class="d-flex align-items-center gap-1"><span class="material-symbols-outlined" style="font-size: 16px;">schedule</span> {{ item.time }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if item.type == 'agenda' %}
+                <form action="{{ url_for('main.delete_agenda', id=item.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir este evento?')">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-link text-muted p-0">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <span class="material-symbols-outlined display-6 mb-2">event_available</span>
+                <p class="mb-0">Nenhum evento programado.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Modal Novo Evento -->
+    <div class="modal fade" id="newEventModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Novo Evento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ url_for('main.add_agenda') }}" method="POST">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <div class="form-floating mb-3">
+                            <input name="title" type="text" class="form-control" id="eventTitle" placeholder="Título" required>
+                            <label for="eventTitle">Título do Evento</label>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <div class="form-floating">
+                                    <input name="date" type="date" class="form-control" id="eventDate" required>
+                                    <label for="eventDate">Data</label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-floating">
+                                    <input name="time" type="time" class="form-control" id="eventTime">
+                                    <label for="eventTime">Hora</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-floating mb-4">
+                            <select name="category" class="form-select" id="eventCat">
+                                <option value="Geral">Geral</option>
+                                <option value="Reunião">Reunião</option>
+                                <option value="Visita Técnica">Visita Técnica</option>
+                                <option value="Prazo">Prazo</option>
+                            </select>
+                            <label for="eventCat">Categoria</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2">Salvar Evento</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
