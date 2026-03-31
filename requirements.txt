@@ -1,0 +1,8 @@
+flask
+jinja2
+python-dotenv
+flask-sqlalchemy
+requests
+pytz
+pillow
+sqlalchemy
